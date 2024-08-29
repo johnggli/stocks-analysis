@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>10 ações mais baratas da bolsa</title>
+    <style>
+      body {
+        margin: auto 20px;
+      }
+      a {
+        text-decoration: none;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+      }
+      th,
+      td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        text-align: left;
+      }
+      th {
+        background-color: #f4f4f4;
+      }
+      /* Estilo para o hover da linha da tabela */
+      tr:hover {
+        background-color: #f4f4f4;
+      }
+      .headerButtons {
+        display: flex;
+        justify-content: space-between;
+      }
+      /* Estilos para o indicador de carregamento */
+      #loadingIndicator {
+        display: none;
+        margin-top: 20px;
+        font-weight: bold;
+        color: blue;
+      }
+      /* Estilos para o botão de link */
+      .info-btn {
+        color: blue;
+        cursor: pointer;
+        font-weight: bold;
+        border: none;
+        background: none;
+        padding: 0 8px;
+      }
+      /* Estilos para o botão de remoção */
+      .remove-btn {
+        color: red;
+        cursor: pointer;
+        font-weight: bold;
+        border: none;
+        background: none;
+      }
+    </style>
+    <!-- Incluindo a biblioteca XLSX -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  </head>
+  <body>
+    <h1>10 ações mais baratas da bolsa</h1>
+    <div class="headerButtons">
+      <input type="file" id="fileInput" accept=".xlsx" />
+      <button id="exportButton">Exportar como XLSX</button>
+    </div>
+    <!-- Indicador de carregamento -->
+    <div id="loadingIndicator">Carregando dados...</div>
+    <table id="resultTable">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Ação</th>
+          <th>Empresa</th>
+          <th>Preço</th>
+          <th>Div.Yield</th>
+          <th>EV/EBIT</th>
+          <th>Volume Financ.(R$)</th>
+          <th>Opções</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <script>
+      document
+        .getElementById("fileInput")
+        .addEventListener("change", handleFile, false);
+
+      function handleFile(e) {
+        const file = e.target.files[0];
+        const reader = new FileReader();
+        const loadingIndicator = document.getElementById("loadingIndicator");
+
+        loadingIndicator.style.display = "block"; // Mostra o indicador de carregamento
+
+        reader.onload = function (event) {
+          const data = new Uint8Array(event.target.result);
+          const workbook = XLSX.read(data, { type: "array" });
+          const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+          const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+
+          // Filtra os dados pelo volume financeiro maior ou igual a 1 milhão de reais
+          const filteredData = jsonData.filter((row) => {
+            const volumeFinanceiro = parseFloat(row["Volume Financ.(R$)"]); // Lê o valor diretamente como float
+            const margemEbit = parseFloat(row["Margem EBIT"]);
+
+            // Verifica se o volume financeiro é maior ou igual a 1 milhão e se a Margem EBIT não é "NA" ou negativa
+            return (
+              volumeFinanceiro >= 1000000 &&
+              !isNaN(margemEbit) &&
+              margemEbit > 0
+            );
+          });
+
+          // Ordena as ações pela coluna "EV/EBIT", do menor para o maior, considerando valores "NA"
+          filteredData.sort((a, b) => {
+            const aValue = parseFloat(a["EV/EBIT"]);
+            const bValue = parseFloat(b["EV/EBIT"]);
+
+            // Coloca "NA" no final
+            if (isNaN(aValue) && isNaN(bValue)) {
+              return 0; // Ambos são "NA", então são considerados iguais
+            } else if (isNaN(aValue)) {
+              return -1; // 'a' é "NA", então vem antes de 'b'
+            } else if (isNaN(bValue)) {
+              return 1; // 'b' é "NA", então vem antes de 'a'
+            } else {
+              return aValue - bValue; // Caso normal, ordena numericamente
+            }
+          });
+
+          // Exibe os dados na tabela
+          const tbody = document.querySelector("#resultTable tbody");
+          tbody.innerHTML = ""; // Limpa o conteúdo existente
+
+          filteredData.forEach((row, index) => {
+            const tr = document.createElement("tr");
+
+            tr.innerHTML = `
+              <td>${index + 1}</td> <!-- Exibe o número da linha -->
+              <td><a href="https://www.investsite.com.br/principais_indicadores.php?cod_negociacao=${
+                row["Ação"]
+              }" target="_blank">${row["Ação"]}</a></td>
+              <td>${row["Empresa"]}</td>
+              <td>${row["Preço"]}</td>
+              <td>${formatPercentage(row["Div.Yield"])}</td>
+              <td>${parseFloat(row["EV/EBIT"]).toFixed(2)}</td>
+              <td>${formatNumber(row["Volume Financ.(R$)"])}</td>
+              <td>
+                <a href="https://investidor10.com.br/acoes/${row[
+                  "Ação"
+                ].toLowerCase()}" target="_blank" class="info-btn">i</a>
+                <button class="remove-btn" onclick="removeRow(this)">X</button>
+              </td>
+            `;
+            tbody.appendChild(tr);
+          });
+
+          loadingIndicator.style.display = "none"; // Esconde o indicador de carregamento
+        };
+
+        reader.readAsArrayBuffer(file);
+      }
+
+      function formatNumber(value) {
+        const number = parseFloat(value);
+        if (isNaN(number)) return value; // Retorna o valor original se não for um número
+
+        // Usa toLocaleString para converter o número para o formato brasileiro
+        return number.toLocaleString("pt-BR", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        });
+      }
+
+      // Função para formatar o Dividend Yield como porcentagem
+      function formatPercentage(value) {
+        const number = parseFloat(value);
+        if (isNaN(number)) return value;
+        return (number * 100).toFixed(2) + "%";
+      }
+
+      function removeRow(button) {
+        // Remove a linha da tabela
+        const row = button.parentElement.parentElement;
+        row.parentElement.removeChild(row);
+
+        // Re-numera as linhas da tabela após uma remoção
+        const rows = document.querySelectorAll("#resultTable tbody tr");
+        rows.forEach((tr, index) => {
+          tr.cells[0].textContent = index + 1;
+        });
+      }
+
+      document
+        .getElementById("exportButton")
+        .addEventListener("click", exportTableToExcel);
+
+      function exportTableToExcel() {
+        const table = document.getElementById("resultTable");
+        const wb = XLSX.utils.table_to_book(table, { sheet: "Sheet1" });
+        XLSX.writeFile(wb, "acoes_baratas.xlsx");
+      }
+    </script>
+  </body>
+</html>
