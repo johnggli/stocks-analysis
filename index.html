@@ -105,7 +105,7 @@
 
           // Filtra os dados pelo volume financeiro maior ou igual a 1 milhão de reais
           const filteredData = jsonData.filter((row) => {
-            const volumeFinanceiro = parseFloat(row["Volume Financ.(R$)"]); // Lê o valor diretamente como float
+            const volumeFinanceiro = parseFloat(row["Volume Diário Médio (3 meses)"]); // Lê o valor diretamente como float
             const margemEbit = parseFloat(row["Margem EBIT"]);
 
             // Verifica se o volume financeiro é maior ou igual a 1 milhão e se a Margem EBIT não é "NA" ou negativa
@@ -147,9 +147,9 @@
               }" target="_blank">${row["Ação"]}</a></td>
               <td>${row["Empresa"]}</td>
               <td>${row["Preço"]}</td>
-              <td>${formatPercentage(row["Div.Yield"])}</td>
+              <td>${formatPercentage(row["Dividend Yield"])}</td>
               <td>${parseFloat(row["EV/EBIT"]).toFixed(2)}</td>
-              <td>${formatNumber(row["Volume Financ.(R$)"])}</td>
+              <td>${formatNumber(row["Volume Diário Médio (3 meses)"])}</td>
               <td>
                 <a href="https://investidor10.com.br/acoes/${row[
                   "Ação"
